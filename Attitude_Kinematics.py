@@ -9,6 +9,7 @@ import math
 '''
 -----------------------------------------------------Kinematics----------------------------------------------------
 '''
+#testing change
 #Calculates 3-2-1 Euler Angles from DCM; TODO: support other euler angle rotations
 def Quat2Euler(quaternion): 
     DCM = Quat2DCM(quaternion)
