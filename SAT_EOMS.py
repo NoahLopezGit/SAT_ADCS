@@ -25,28 +25,36 @@ def exnxsofmotion(x_vec, t_vec, J):
     return RHS
 
 
-def solver(exn,t0,tf,n,J):
-    x0_vec = [1,0,0,0,0,0,0]
+def solver(exn,x0_vec,t0,tf,n,J):
     t_vec = np.linspace(t0,tf,n)
-    sol = sp.odeint(exn, x0_vec,t_vec,parameters=[J])
+    sol = sp.odeint(exn, x0_vec,t_vec,args=(J,))
 
     #plot results
-    i=1
-    for solution_vector in sol:
-        plt.fig(i)
+    fig_dict = {}
+    for i in range(len(x0_vec)):
+        if i % 4==0:
+            n = 1+i//4
+            fig = "fig" + str(n)
+            fig_dict[fig] = plt.figure(n)
+        solution_vector = sol[:,i]
+        fig_dict[fig].add_subplot(4,1,1+i%4)
         plt.plot(
             t_vec, solution_vector
         )
         plt.title("State{0}".format(i))
-        i+=1
     plt.show()
     
     #store results
     data = {}
-    i=0
-    for solution_vector in sol:
+    for i in range(len(x0_vec)):
+        solution_vector = sol[:,i]
         data["state{0}".format(i)] = solution_vector
-        i+=1
     df = pd.DataFrame(data)
-    writer = pd.ExcelWriter("State_Integration.xlsx", engine='xlswriter')
+    print(df)
+    writer = pd.ExcelWriter('State_Integration.xlsx', engine='xlsxwriter')
     df.to_excel(writer, index=False)
+    writer.save()
+
+
+if __name__=="__main__":
+    solver(exnxsofmotion, [1,0.1,0.1,0,0,0,1], 0,10,101, [200,100,100])
