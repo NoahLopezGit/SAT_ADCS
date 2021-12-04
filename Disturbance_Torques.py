@@ -36,7 +36,7 @@ def cosd(deg):
 
 #importing atmospheric data from csv
 atmos_table = []
-with open('Atmospheric_density_model.csv', 'r', newline='') as csvfile:
+with open('Atmos_Density_Model.csv', 'r', newline='') as csvfile:
     reader = csv.reader(csvfile, delimiter=',', quotechar='|')
     for row in reader:
         atmos_table.append([ float(row[0]), float(row[1]), float(row[2]) ])
