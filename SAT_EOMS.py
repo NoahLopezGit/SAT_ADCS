@@ -26,7 +26,7 @@ def exnxsofmotion(x_vec, t_vec, J):
     return RHS
 
 
-def qnorm(w1,w2,w3,q1,q2,q3,q4): #effectively normalizes the quaternion... but is this keeping simulation more accurate (seems to not have much effect)
+def qnorm(w1,w2,w3,q1,q2,q3,q4): #This kindof works to normalize q... TODO find a better solution to this
     q_new = np.array([
         q1 + 0.5*( q4*w1 - q3*w2 + q2*w3),
         q2 + 0.5*( q3*w1 - q4*w2 - q1*w3),
@@ -77,12 +77,7 @@ if __name__=="__main__":
     tf = 20
     n = 201
     t_vec = np.linspace(t0,tf,n)
-    solution = solver(exnxsofmotion, [0.1,0.1,1,0,0,0,1], t_vec, [100,100,500])
-    
-    for instance in solution:
-        instance[3:7] = instance[3:7] /np.linalg.norm(instance[3:7]) #trying to normalize quaternions... dont think this will work
-
-
+    solution = solver(exnxsofmotion, [0.1,0.1,1,0,0,0,1], t_vec, [100,100,200])
     att.Animate_Attitude_Set(np.array(solution[:,3:7]).transpose(),10/100)
     plot_results(solution, t_vec)
     save_results(solution, t_vec)
