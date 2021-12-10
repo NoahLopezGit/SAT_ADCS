@@ -179,8 +179,8 @@ def Animate_Attitude_Set(quaternion_array, h):
         data_y[:,i] = Q_Tran_Vec(np.transpose(quaternion_array[:,i]), unit_y)
         data_x[:,i] = Q_Tran_Vec(np.transpose(quaternion_array[:,i]), unit_x)
 
-        print(np.dot(data_x[:,i],data_z[:,i])) #TODO: figure out why these values are not close enough to zero
-        print(np.dot(data_y[:,i],data_z[:,i]))
+        #print(np.dot(data_x[:,i],data_z[:,i])) #TODO: figure out why these values are not close enough to zero
+        #print(np.dot(data_y[:,i],data_z[:,i]))
 
     #Logitistics for plotting vectors
     def update(num, data_z, data_y, data_x, line1, line2, line3):
