@@ -40,7 +40,6 @@ def orbital_model(X_vec,t_vec, G,M):
 
 
 def get_plot(solution):
-    fig1 = plt.figure(1)
     plt.plot(   0.0,0.0,
                 '.k',
                 solution[:,0], solution[:,1],
