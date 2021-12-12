@@ -39,7 +39,16 @@ def Q_Tran_Vec(quaternion, vector, active=False):
 
 #Calculates PHI matrix based on quat; for quat transformation
 def Q2PHI(quaternion):
-    q = quaternion
+
+    #convert to list if in matrix column vector form
+    q = [0,0,0,0]
+    if np.shape(quaternion)==(4,1):
+        for i in range(4):
+            q[i] = quaternion[i,0]
+    else:
+        q = quaternion
+    
+    #generate PHI matrix from q list
     PHI = np.matrix([
         [  q[3], -q[2],  q[1]  ],
         [  q[2],  q[3], -q[0]  ],
@@ -51,7 +60,16 @@ def Q2PHI(quaternion):
 
 #Calculates PSI matrix based on quat; for quat transformation
 def Q2PSI(quaternion):
-    q = quaternion
+    
+    #convert to list if in matrix column vector form
+    q = [0,0,0,0]
+    if np.shape(quaternion)==(4,1):
+        for i in range(4):
+            q[i] = quaternion[0,i]
+    else:
+        q = quaternion
+    
+    #generate PSI matrix from q list
     PSI = np.matrix([
         [  q[3],  q[2], -q[1]  ],
         [ -q[2],  q[3],  q[0]  ],

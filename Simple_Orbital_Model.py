@@ -60,7 +60,7 @@ if __name__=="__main__":
     #X,Y,Vx,Vy
     states = [ orbital_radius,0.0, 0.0,orbital_velocity]
     orbital_period = get_orbital_period(states[0:2], mass_earth)
-    t_vec = np.linspace(0,3*orbital_period,time_steps)
+    t_vec = np.linspace(0,orbital_period,time_steps)
     
     sol = sp.odeint(orbital_model, states, t_vec,args=(gravity_constant,mass_earth))
     print(sol)
