@@ -11,8 +11,8 @@ Satellite EOM model - Noah Lopez
 
 
 #Global Constants
-kp = 1000.0
-kd = 1000.0
+kp = 100.0
+kd = 100.0
 
 #output storage
 time_vector    = [] 
@@ -26,22 +26,33 @@ def exnxsofmotion(x_vec, time, J,command_quaternion):
     vector of corresponding states (not differential)
     can only go first order so higher order diffeq must be described as system of first order
     '''
+
+    #trying normalizing q every time this function is called
+    #if np.linalg.norm(x_vec[3:7]) > 1.1:
+    #    print("issue")
+    #x_vec[3:7] = x_vec[3:7]/np.linalg.norm(x_vec[3:7])
+    
     w1,w2,w3,q1,q2,q3,q4 = x_vec
     #constructing RHS vector TODO add L functionality here... CLEANUP??! 
     RHS = [
         1/J[0]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[0,0] - ( w2*w3*J[2] - w3*w2*J[1])),
         1/J[1]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[1,0] - ( w3*w1*J[0] - w1*w3*J[2])),
         1/J[2]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[2,0] - ( w1*w2*J[1] - w2*w1*J[0])),
-        0.5*( q4*w1 - q3*w2 + q2*w3) / qnorm(w1,w2,w3,q1,q2,q3,q4), #kindof a bad way to normalize q I think
-        0.5*( q3*w1 - q4*w2 - q1*w3) / qnorm(w1,w2,w3,q1,q2,q3,q4),
-        0.5*(-q2*w1 - q1*w2 + q4*w3) / qnorm(w1,w2,w3,q1,q2,q3,q4),
-        0.5*(-q1*w1 - q2*w2 - q3*w3) / qnorm(w1,w2,w3,q1,q2,q3,q4),
+        0.5*( q4*w1 - q3*w2 + q2*w3),# / qnorm(w1,w2,w3,q1,q2,q3,q4), #kindof a bad way to normalize q I think
+        0.5*( q3*w1 - q4*w2 - q1*w3),# / qnorm(w1,w2,w3,q1,q2,q3,q4),
+        0.5*(-q2*w1 - q1*w2 + q4*w3),# / qnorm(w1,w2,w3,q1,q2,q3,q4),
+        0.5*(-q1*w1 - q2*w2 - q3*w3)# / qnorm(w1,w2,w3,q1,q2,q3,q4),
     ]
+    #for storing values which are not tracked in solution (i.e. torques, ref input)
     time_vector.append(time)
     output_vector.append([
         get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[0,0],
         get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[1,0],
-        get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[2,0]
+        get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[2,0],
+        x_vec[3],
+        x_vec[4],
+        x_vec[5],
+        x_vec[6]
     ])
     return RHS
 
@@ -90,10 +101,10 @@ def solver(exn,x0_vec,t_vec,J,command_quaternion):
 
 def plot_results(t_vec, sol, t2_vec, outputs):
     sol_name = ["W1","W2",'W3',"Q1","Q2","Q3","Q4"]
-    output_name = ["T1","T2","T3"]
+    output_name = ["T1","T2","T3","Q1","Q2","Q3","Q4"]
     #plot results
     fig_dict = {}
-    for i in range(len(sol[0,:])):
+    for i in range(np.shape(sol)[1]):
         if i % 4==0:
             n = 1+i//4
             fig = "sol_fig" + str(n)
@@ -123,7 +134,7 @@ def plot_results(t_vec, sol, t2_vec, outputs):
 def save_results(t_vec, sol, t2_vec, outputs):
     #store results
     sol_name = ["W1","W2",'W3',"Q1","Q2","Q3","Q4"]
-    output_name = ["T1","T2","T3"]
+    output_name = ["T1","T2","T3","Q1","Q2","Q3","Q4"]
     data1 = {}
     data2 = {}
 
@@ -149,8 +160,8 @@ def save_results(t_vec, sol, t2_vec, outputs):
 
 if __name__=="__main__":
     t0 = 0
-    tf = 20
-    n = 201
+    tf = 10
+    n = 500
     t_vec = np.linspace(t0,tf,n)
     solution = solver(  exnxsofmotion, 
                         [ 0.1,0.1,1, 0,0,0.3826834,0.9238795 ],    #initial states
