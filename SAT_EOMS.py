@@ -11,8 +11,9 @@ Satellite EOM model - Noah Lopez
 
 
 #Global Constants
-kp = 10000.0
-kd = 10000.0
+kp = 100.0
+kd = 100.0
+controller=True
 
 #output storage
 time_vector    = [] 
@@ -77,6 +78,8 @@ def get_torque(q_command,q_actual,angular_velocity):
     delta_q = ct.get_delta_q(q_command,q_actual)
     controller_torque = ct.get_torque( kp,delta_q, kd, angular_velocity)
     total_torque = controller_torque # + total_disturbance_torque
+    if controller==False:
+        total_torque=np.matrix([[0.0],[0.0],[0.0]])
     return total_torque #this will return as 3 dim column vector (in matrix)
     
 
@@ -146,13 +149,13 @@ def save_results(t_vec, sol, t2_vec, outputs):
 
 if __name__=="__main__":
     t0 = 0
-    tf = 10
+    tf = 20
     n = 500
     t_vec = np.linspace(t0,tf,n)
     solution = solver(  exnxsofmotion, 
-                        [ 0.1,0.1,1, 0,0,0.3826834,0.9238795 ],    #initial states
+                        [ 0.1,0.1,1, 0,0,0.0,1.0 ],    #initial states
                         t_vec,                  #t_vec to integrate over
-                        [100,100,200],          #J (Principle axis MOI) vector
+                        [100,100,500],          #J (Principle axis MOI) vector
                         [0.0,0.0,0.0,1.0])      #command quaternion
     att.Animate_Attitude_Set(np.array(solution[:,3:7]).transpose(),10/100)
     
