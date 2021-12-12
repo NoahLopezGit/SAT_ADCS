@@ -26,11 +26,6 @@ def exnxsofmotion(x_vec, time, J,command_quaternion):
     vector of corresponding states (not differential)
     can only go first order so higher order diffeq must be described as system of first order
     '''
-
-    #trying normalizing q every time this function is called
-    #if np.linalg.norm(x_vec[3:7]) > 1.1:
-    #    print("issue")
-    #x_vec[3:7] = x_vec[3:7]/np.linalg.norm(x_vec[3:7])
     
     w1,w2,w3,q1,q2,q3,q4 = x_vec
     #constructing RHS vector TODO add L functionality here... CLEANUP??! 
@@ -38,11 +33,12 @@ def exnxsofmotion(x_vec, time, J,command_quaternion):
         1/J[0]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[0,0] - ( w2*w3*J[2] - w3*w2*J[1])),
         1/J[1]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[1,0] - ( w3*w1*J[0] - w1*w3*J[2])),
         1/J[2]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[2,0] - ( w1*w2*J[1] - w2*w1*J[0])),
-        0.5*( q4*w1 - q3*w2 + q2*w3),# / qnorm(w1,w2,w3,q1,q2,q3,q4), #kindof a bad way to normalize q I think
-        0.5*( q3*w1 - q4*w2 - q1*w3),# / qnorm(w1,w2,w3,q1,q2,q3,q4),
-        0.5*(-q2*w1 - q1*w2 + q4*w3),# / qnorm(w1,w2,w3,q1,q2,q3,q4),
-        0.5*(-q1*w1 - q2*w2 - q3*w3)# / qnorm(w1,w2,w3,q1,q2,q3,q4),
+        0.5*( q4*w1 - q3*w2 + q2*w3),
+        0.5*( q3*w1 - q4*w2 - q1*w3),
+        0.5*(-q2*w1 - q1*w2 + q4*w3),
+        0.5*(-q1*w1 - q2*w2 - q3*w3)
     ]
+
     #for storing values which are not tracked in solution (i.e. torques, ref input)
     time_vector.append(time)
     output_vector.append([
@@ -82,17 +78,7 @@ def get_torque(q_command,q_actual,angular_velocity):
     controller_torque = ct.get_torque( kp,delta_q, kd, angular_velocity)
     total_torque = controller_torque # + total_disturbance_torque
     return total_torque #this will return as 3 dim column vector (in matrix)
-
-
-def qnorm(w1,w2,w3,q1,q2,q3,q4): #This kindof works to normalize q... TODO find a better solution to this
-    q_new = np.array([
-        q1 + 0.5*( q4*w1 - q3*w2 + q2*w3),
-        q2 + 0.5*( q3*w1 - q4*w2 - q1*w3),
-        q3 + 0.5*(-q2*w1 - q1*w2 + q4*w3),
-        q4 + 0.5*(-q1*w1 - q2*w2 - q3*w3)
-    ])
-    qnorm = np.linalg.norm(q_new)
-    return qnorm
+    
 
 def solver(exn,x0_vec,t_vec,J,command_quaternion):
     sol = sp.odeint(exn, x0_vec,t_vec,args=(J,command_quaternion))
