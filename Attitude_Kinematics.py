@@ -43,8 +43,9 @@ def Q2PHI(quaternion):
     #convert to list if in matrix column vector form
     q = [0,0,0,0]
     if np.shape(quaternion)==(4,1):
+        #if column vector form
         for i in range(4):
-            q[i] = quaternion[i,0]
+            q[i] = quaternion[i,0] #TODO make sure switchin i,0 didnt break anything
     else:
         q = quaternion
     
@@ -58,14 +59,14 @@ def Q2PHI(quaternion):
     return PHI
 
 
-#Calculates PSI matrix based on quat; for quat transformation
+#Calculates PSI matrix based on quat; for quat transformation 
 def Q2PSI(quaternion):
     
     #convert to list if in matrix column vector form
     q = [0,0,0,0]
     if np.shape(quaternion)==(4,1):
         for i in range(4):
-            q[i] = quaternion[0,i]
+            q[i] = quaternion[i,0]
     else:
         q = quaternion
     
@@ -191,11 +192,11 @@ def Animate_Attitude_Set(quaternion_array, h):
     unit_z = np.array([0,0,1])
     unit_y = np.array([0,1,0])
     unit_x = np.array([1,0,0])
-    for i in range(timesteps):\
+    for i in range(timesteps):
         #unit vectors in body frame to their represenation in the inertial frame 
-        data_z[:,i] = Q_Tran_Vec(np.transpose(quaternion_array[:,i]), unit_z) #inverse passive transform of unit vector in body gives vector in intertial frame
-        data_y[:,i] = Q_Tran_Vec(np.transpose(quaternion_array[:,i]), unit_y)
-        data_x[:,i] = Q_Tran_Vec(np.transpose(quaternion_array[:,i]), unit_x)
+        data_z[:,i] = Q_Tran_Vec(quaternion_array[:,i], unit_z) #inverse passive transform of unit vector in body gives vector in intertial frame
+        data_y[:,i] = Q_Tran_Vec(quaternion_array[:,i], unit_y)
+        data_x[:,i] = Q_Tran_Vec(quaternion_array[:,i], unit_x)
 
         #print(np.dot(data_x[:,i],data_z[:,i])) #TODO: figure out why these values are not close enough to zero
         #print(np.dot(data_y[:,i],data_z[:,i]))

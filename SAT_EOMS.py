@@ -11,8 +11,8 @@ Satellite EOM model - Noah Lopez
 
 
 #Global Constants
-kp = 100.0
-kd = 100.0
+kp = 10000.0
+kd = 10000.0
 
 #output storage
 time_vector    = [] 
