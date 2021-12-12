@@ -39,7 +39,7 @@ def exnxsofmotion(x_vec, time, J,command_quaternion):
         1/J[1]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[1,0] - ( w3*w1*J[0] - w1*w3*J[2])),
         1/J[2]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[2,0] - ( w1*w2*J[1] - w2*w1*J[0])),
         0.5*( q4*w1 - q3*w2 + q2*w3),# / qnorm(w1,w2,w3,q1,q2,q3,q4), #kindof a bad way to normalize q I think
-        0.5*( q3*w1 - q4*w2 - q1*w3),# / qnorm(w1,w2,w3,q1,q2,q3,q4),
+        0.5*( q3*w1 + q4*w2 - q1*w3),# / qnorm(w1,w2,w3,q1,q2,q3,q4),
         0.5*(-q2*w1 - q1*w2 + q4*w3),# / qnorm(w1,w2,w3,q1,q2,q3,q4),
         0.5*(-q1*w1 - q2*w2 - q3*w3)# / qnorm(w1,w2,w3,q1,q2,q3,q4),
     ]
