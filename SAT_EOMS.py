@@ -74,6 +74,8 @@ def get_torque(q_command,q_actual,angular_velocity):
         [angular_velocity[2]]
     ])
 
+    #trying normalizing vectors before calculating state
+    #q_actual = q_actual/np.linalg.norm(q_actual)
 
     #need to get sum of disturbance torques and torque from reaction control wheels
     delta_q = ct.get_delta_q(q_command,q_actual)
@@ -124,7 +126,7 @@ def plot_results(t_vec, sol, t2_vec, outputs):
 def save_results(t_vec, sol, t2_vec, outputs):
     #store results
     sol_name = ["W1","W2",'W3',"Q1","Q2","Q3","Q4"]
-    output_name = ["T1","T2","T3","Q1","Q2","Q3","Q4","Qnorm"]
+    output_name = ["T1","T2","T3","Q1","Q2","Q3","Q4"]
     data1 = {}
     data2 = {}
 
