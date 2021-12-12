@@ -14,9 +14,12 @@ Satellite EOM model - Noah Lopez
 kp = 1000.0
 kd = 1000.0
 
+#output storage
+time_vector    = [] 
+output_vector   = []
 
 #Satellite Integrator Model
-def exnxsofmotion(x_vec, t_vec, J,command_quaternion):
+def exnxsofmotion(x_vec, time, J,command_quaternion):
     '''
     Need in for for scipy odeint.
     vector of explicit differential exn (RHS)
@@ -24,7 +27,7 @@ def exnxsofmotion(x_vec, t_vec, J,command_quaternion):
     can only go first order so higher order diffeq must be described as system of first order
     '''
     w1,w2,w3,q1,q2,q3,q4 = x_vec
-    #constructing RHS vector TODO add L functionality here... CLEANUP??!
+    #constructing RHS vector TODO add L functionality here... CLEANUP??! 
     RHS = [
         1/J[0]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[0,0] - ( w2*w3*J[2] - w3*w2*J[1])),
         1/J[1]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[1,0] - ( w3*w1*J[0] - w1*w3*J[2])),
@@ -34,6 +37,12 @@ def exnxsofmotion(x_vec, t_vec, J,command_quaternion):
         0.5*(-q2*w1 - q1*w2 + q4*w3) / qnorm(w1,w2,w3,q1,q2,q3,q4),
         0.5*(-q1*w1 - q2*w2 - q3*w3) / qnorm(w1,w2,w3,q1,q2,q3,q4),
     ]
+    time_vector.append(time)
+    output_vector.append([
+        get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[0,0],
+        get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[1,0],
+        get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[2,0]
+    ])
     return RHS
 
 
@@ -79,7 +88,7 @@ def solver(exn,x0_vec,t_vec,J,command_quaternion):
     return sol
 
 
-def plot_results(sol, t_vec):
+def plot_results(t_vec, sol):
     #plot results
     fig_dict = {}
     for i in range(len(sol[0,:])):
@@ -96,17 +105,29 @@ def plot_results(sol, t_vec):
     plt.show()
 
 
-def save_results(sol, t_vec):
+def save_results(t_vec, sol, t2_vec, outputs):
     #store results
-    data = {}
-    data["time (s)"] = t_vec
+    sol_name = ["W1","W2",'W3',"Q1","Q2","Q3","Q4"]
+    output_name = ["T1","T2","T3"]
+    data1 = {}
+    data2 = {}
+
+    #adding solution values
+    data1["time (s)"] = t_vec
     for i in range(len(sol[0,:])):
         solution_vector = sol[:,i]
-        data["state{0}".format(i)] = solution_vector
-    df = pd.DataFrame(data)
-    print(df)
+        data1["state={0}".format(sol_name[i])] = solution_vector
+    #adding output values
+    data2["time2 (s)"] = t2_vec
+    for i in range(np.shape(outputs)[1]):
+        output_vector = outputs[:,i]
+        data2["state={0}".format(output_name[i])] = output_vector
+    
+    df1 = pd.DataFrame(data1)
+    df2 = pd.DataFrame(data2)
     writer = pd.ExcelWriter('State_Integration.xlsx', engine='xlsxwriter')
-    df.to_excel(writer, index=False)
+    df1.to_excel(writer, sheet_name="Solution States", index=False)
+    df2.to_excel(writer, sheet_name="Output States", index=False)
     writer.save()
 
 
@@ -121,5 +142,7 @@ if __name__=="__main__":
                         [100,100,200],          #J (Principle axis MOI) vector
                         [0.0,0.0,0.0,1.0])      #command quaternion
     att.Animate_Attitude_Set(np.array(solution[:,3:7]).transpose(),10/100)
-    plot_results(solution, t_vec)
-    save_results(solution, t_vec)
+    
+    output_vector = np.asarray(output_vector)
+    plot_results(t_vec, solution)
+    save_results(t_vec, solution, time_vector, output_vector)
