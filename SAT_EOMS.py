@@ -88,20 +88,35 @@ def solver(exn,x0_vec,t_vec,J,command_quaternion):
     return sol
 
 
-def plot_results(t_vec, sol):
+def plot_results(t_vec, sol, t2_vec, outputs):
+    sol_name = ["W1","W2",'W3',"Q1","Q2","Q3","Q4"]
+    output_name = ["T1","T2","T3"]
     #plot results
     fig_dict = {}
     for i in range(len(sol[0,:])):
         if i % 4==0:
             n = 1+i//4
-            fig = "fig" + str(n)
+            fig = "sol_fig" + str(n)
             fig_dict[fig] = plt.figure(n)
         solution_vector = sol[:,i]
         fig_dict[fig].add_subplot(4,1,1+i%4)
         plt.plot(
             t_vec, solution_vector
         )
-        plt.title("State{0}".format(i))
+        plt.ylabel(sol_name[i])
+
+    for i in range(np.shape(outputs)[1]): #hopefully this works
+        if i % 4==0:
+            n = 2+(i+len(sol[0,:]))//4
+            fig = "out_fig" + str(n)
+            fig_dict[fig] = plt.figure(n)
+        output_vector = outputs[:,i]
+        fig_dict[fig].add_subplot(4,1,1+i%4)
+        plt.plot(
+            t2_vec, output_vector
+        )
+        plt.ylabel(output_name[i])
+    
     plt.show()
 
 
@@ -123,6 +138,7 @@ def save_results(t_vec, sol, t2_vec, outputs):
         output_vector = outputs[:,i]
         data2["state={0}".format(output_name[i])] = output_vector
     
+    #Saving output and solution values 
     df1 = pd.DataFrame(data1)
     df2 = pd.DataFrame(data2)
     writer = pd.ExcelWriter('State_Integration.xlsx', engine='xlsxwriter')
@@ -144,5 +160,5 @@ if __name__=="__main__":
     att.Animate_Attitude_Set(np.array(solution[:,3:7]).transpose(),10/100)
     
     output_vector = np.asarray(output_vector)
-    plot_results(t_vec, solution)
+    plot_results(t_vec, solution, time_vector, output_vector)
     save_results(t_vec, solution, time_vector, output_vector)
