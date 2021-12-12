@@ -11,8 +11,8 @@ Satellite EOM model - Noah Lopez
 
 
 #Global Constants
-kp = 100.0
-kd = 100.0
+kp = 0.0
+kd = 0.0
 controller=True
 
 #output storage
@@ -35,7 +35,7 @@ def exnxsofmotion(x_vec, time, J,command_quaternion):
         1/J[1]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[1,0] - ( w3*w1*J[0] - w1*w3*J[2])),
         1/J[2]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[2,0] - ( w1*w2*J[1] - w2*w1*J[0])),
         0.5*( q4*w1 - q3*w2 + q2*w3),
-        0.5*( q3*w1 - q4*w2 - q1*w3),
+        0.5*( q3*w1 + q4*w2 - q1*w3),
         0.5*(-q2*w1 - q1*w2 + q4*w3),
         0.5*(-q1*w1 - q2*w2 - q3*w3)
     ]
@@ -73,6 +73,7 @@ def get_torque(q_command,q_actual,angular_velocity):
         [angular_velocity[1]],
         [angular_velocity[2]]
     ])
+
 
     #need to get sum of disturbance torques and torque from reaction control wheels
     delta_q = ct.get_delta_q(q_command,q_actual)
@@ -123,7 +124,7 @@ def plot_results(t_vec, sol, t2_vec, outputs):
 def save_results(t_vec, sol, t2_vec, outputs):
     #store results
     sol_name = ["W1","W2",'W3',"Q1","Q2","Q3","Q4"]
-    output_name = ["T1","T2","T3","Q1","Q2","Q3","Q4"]
+    output_name = ["T1","T2","T3","Q1","Q2","Q3","Q4","Qnorm"]
     data1 = {}
     data2 = {}
 
@@ -149,14 +150,14 @@ def save_results(t_vec, sol, t2_vec, outputs):
 
 if __name__=="__main__":
     t0 = 0
-    tf = 20
-    n = 500
+    tf = 10
+    n = 50
     t_vec = np.linspace(t0,tf,n)
     solution = solver(  exnxsofmotion, 
-                        [ 0.1,0.1,1, 0,0,0.0,1.0 ],    #initial states
+                        [ -0.5,10.0,0.5, 0.0,0.0,0.0,1.0 ],    #initial states
                         t_vec,                  #t_vec to integrate over
-                        [100,100,500],          #J (Principle axis MOI) vector
-                        [0.0,0.0,0.0,1.0])      #command quaternion
+                        [100,100,100],          #J (Principle axis MOI) vector
+                        [0.0,0.2705981,0.2705981,0.9238795])      #command quaternion
     att.Animate_Attitude_Set(np.array(solution[:,3:7]).transpose(),10/100)
     
     output_vector = np.asarray(output_vector)
