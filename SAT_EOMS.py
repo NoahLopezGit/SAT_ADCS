@@ -11,6 +11,7 @@ TODO
 -add toggleable control
 -add toggleable animate
 -get global constants working when importing (and you change them based on config)
+-separate use (examples) from import file (need to make it compatible)
 -add momentum wheel physics and saturation tracking
 -add disturbance torques (and verify they are correct)
 -add position and velocity vector input for orbital model (can take our generated inputs or from a csv)
