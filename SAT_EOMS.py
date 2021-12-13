@@ -15,7 +15,8 @@ TODO
 -add momentum wheel physics and saturation tracking
 -add disturbance torques (and verify they are correct)
 -add position and velocity vector input for orbital model (can take our generated inputs or from a csv)
--add momentum dumping model (thrusters)??
+-add momentum dumping model (thrusters)
+?-refactor to work in one list mode (np.matrix columns)
 """
 
 
