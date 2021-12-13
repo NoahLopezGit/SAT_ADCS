@@ -1,3 +1,4 @@
+from typing import final
 import numpy as np
 import scipy.integrate as sp
 import matplotlib.pyplot as plt
@@ -40,6 +41,11 @@ def exnxsofmotion(x_vec, time, J,command_quaternion):
     vector of corresponding states (not differential)
     can only go first order so higher order diffeq must be described as system of first order
     '''
+
+    #trying normalizing q every time this function is called
+    #if np.linalg.norm(x_vec[3:7]) > 1.1:
+    #    print("issue")
+    #x_vec[3:7] = x_vec[3:7]/np.linalg.norm(x_vec[3:7])
     
     w1,w2,w3,q1,q2,q3,q4 = x_vec
     #constructing RHS vector TODO add L functionality here... CLEANUP??! 
@@ -52,7 +58,6 @@ def exnxsofmotion(x_vec, time, J,command_quaternion):
         0.5*(-q2*w1 - q1*w2 + q4*w3),
         0.5*(-q1*w1 - q2*w2 - q3*w3)
     ]
-
     #for storing values which are not tracked in solution (i.e. torques, ref input)
     time_vector.append(time)
     output_vector.append([
@@ -95,7 +100,6 @@ def get_torque(q_command,q_actual,angular_velocity):
         total_torque=np.matrix([[0.0],[0.0],[0.0]])
 
     return total_torque #this will return as 3 dim column vector (in matrix)
-    
 
 def solver(exn,initial_conditions,t_vec,J,command_quaternion):
     #want to solve ODE for various steps of t0-tf and normalize between each step (ensures quaternion norm ~ 1)
