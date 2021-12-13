@@ -11,8 +11,8 @@ Satellite EOM model - Noah Lopez
 
 
 #Global Constants - add to example??
-kp = 1.0
-kd = 1.0
+kp = 0.1
+kd = 0.1
 controller=True
 
 #output storage
@@ -86,9 +86,19 @@ def get_torque(q_command,q_actual,angular_velocity):
     return total_torque #this will return as 3 dim column vector (in matrix)
     
 
-def solver(exn,x0_vec,t_vec,J,command_quaternion):
-    sol = sp.odeint(exn, x0_vec,t_vec,args=(J,command_quaternion))
-    return sol
+def solver(exn,initial_conditions,t_vec,J,command_quaternion):
+    #want to solve ODE for various steps of t0-tf and normalize between each step (ensures quaternion norm ~ 1)
+    #split up by intevervals of t_vec
+    time_previous = 0.0
+    final_solution = np.array(initial_conditions)
+    for time in t_vec[1:]: #dont want inital time of 0
+        sol = sp.odeint(exn, initial_conditions,[time_previous, time],args=(J,command_quaternion))
+        final_solution = np.vstack((final_solution, sol[-1,:]))
+        initial_conditions = sol[-1,:] #make sure indexed correctly
+        #Normaliation of initial conditions before starting another ODE step
+        initial_conditions[3:7] = initial_conditions[3:7]/np.linalg.norm(initial_conditions[3:7])
+        time_previous = time
+    return final_solution
 
 
 def plot_results(t_vec, sol, t2_vec, outputs):
@@ -152,15 +162,15 @@ def save_results(t_vec, sol, t2_vec, outputs):
 
 if __name__=="__main__":
     t0 = 0
-    tf = 1000
-    n = 2000
+    tf = 100
+    n = 200
     t_vec = np.linspace(t0,tf,n)
     solution = solver(  exnxsofmotion, 
-                        [ 0.1,0.1,0.1, 0.0,0.0,0.0,1.0 ],    #initial states
+                        [ 0.1,0.1,1.0, 0.0,0.0,0.0,1.0 ],    #initial states
                         t_vec,                  #t_vec to integrate over
                         [100,100,100],          #J (Principle axis MOI) vector
-                        [0.0,0.2705981,0.2705981,0.9238795])      #command quaternion
-    att.Animate_Attitude_Set(np.array(solution[:,3:7]).transpose(),10/100)
+                        [0.0,0.0,0.0,1.0])      #command quaternion
+    att.Animate_Attitude_Set(np.array(solution[:,3:7]).transpose(),10/100) #TODO figure out timing parameter
     
     output_vector = np.asarray(output_vector)
     plot_results(t_vec, solution, time_vector, output_vector)
