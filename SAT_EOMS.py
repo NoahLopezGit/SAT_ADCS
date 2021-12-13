@@ -10,9 +10,9 @@ Satellite EOM model - Noah Lopez
 """
 
 
-#Global Constants
-kp = 0.0
-kd = 0.0
+#Global Constants - add to example??
+kp = 1.0
+kd = 1.0
 controller=True
 
 #output storage
@@ -152,11 +152,11 @@ def save_results(t_vec, sol, t2_vec, outputs):
 
 if __name__=="__main__":
     t0 = 0
-    tf = 10
-    n = 50
+    tf = 1000
+    n = 2000
     t_vec = np.linspace(t0,tf,n)
     solution = solver(  exnxsofmotion, 
-                        [ -0.5,10.0,0.5, 0.0,0.0,0.0,1.0 ],    #initial states
+                        [ 0.1,0.1,0.1, 0.0,0.0,0.0,1.0 ],    #initial states
                         t_vec,                  #t_vec to integrate over
                         [100,100,100],          #J (Principle axis MOI) vector
                         [0.0,0.2705981,0.2705981,0.9238795])      #command quaternion
