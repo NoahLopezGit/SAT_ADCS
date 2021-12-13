@@ -7,6 +7,14 @@ import Controller_Logic as ct
 
 """
 Satellite EOM model - Noah Lopez
+TODO
+-add toggleable control
+-add toggleable animate
+-get global constants working when importing (and you change them based on config)
+-add momentum wheel physics and saturation tracking
+-add disturbance torques (and verify they are correct)
+-add position and velocity vector input for orbital model (can take our generated inputs or from a csv)
+-add momentum dumping model (thrusters)??
 """
 
 
