@@ -1,3 +1,4 @@
+from typing import final
 import numpy as np
 import scipy.integrate as sp
 import matplotlib.pyplot as plt
@@ -94,9 +95,19 @@ def qnorm(w1,w2,w3,q1,q2,q3,q4): #This kindof works to normalize q... TODO find 
     qnorm = np.linalg.norm(q_new)
     return qnorm
 
-def solver(exn,x0_vec,t_vec,J,command_quaternion):
-    sol = sp.odeint(exn, x0_vec,t_vec,args=(J,command_quaternion))
-    return sol
+def solver(exn,initial_conditions,t_vec,J,command_quaternion):
+    #want to solve ODE for various steps of t0-tf and normalize between each step (ensures quaternion norm ~ 1)
+    #split up by intevervals of t_vec
+    time_previous = 0.0
+    final_solution = np.array(initial_conditions)
+    for time in t_vec[1:]: #dont want inital time of 0
+        sol = sp.odeint(exn, initial_conditions,[time_previous, time],args=(J,command_quaternion))
+        final_solution = np.vstack((final_solution, sol[-1,:]))
+        initial_conditions = sol[-1,:] #make sure indexed correctly
+        #Normaliation of initial conditions before starting another ODE step
+        initial_conditions[3:7] = initial_conditions[3:7]/np.linalg.norm(initial_conditions[3:7])
+        time_previous = time
+    return final_solution
 
 
 def plot_results(t_vec, sol, t2_vec, outputs):
@@ -160,8 +171,8 @@ def save_results(t_vec, sol, t2_vec, outputs):
 
 if __name__=="__main__":
     t0 = 0
-    tf = 10
-    n = 500
+    tf = 20
+    n = 40
     t_vec = np.linspace(t0,tf,n)
     solution = solver(  exnxsofmotion, 
                         [ 0.1,0.1,1, 0,0,0.3826834,0.9238795 ],    #initial states
