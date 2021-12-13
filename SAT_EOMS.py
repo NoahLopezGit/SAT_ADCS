@@ -8,12 +8,26 @@ import Controller_Logic as ct
 
 """
 Satellite EOM model - Noah Lopez
+TODO
+-add toggleable control
+-add toggleable animate
+-get global constants working when importing (and you change them based on config)
+-separate use (examples) from import file (need to make it compatible)
+-add momentum wheel physics and saturation tracking
+-add disturbance torques (and verify they are correct)
+-add position and velocity vector input for orbital model (can take our generated inputs or from a csv)
+-add momentum dumping model (thrusters)
+-make plotting better
+?-refactor to work in one list mode (np.matrix columns)
 """
 
 
-#Global Constants
-kp = 100.0
+#Global Constants - add to example??
+#import from config.txt file
+
+kp = 10.0
 kd = 100.0
+controller=True
 
 #output storage
 time_vector    = [] 
@@ -39,10 +53,10 @@ def exnxsofmotion(x_vec, time, J,command_quaternion):
         1/J[0]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[0,0] - ( w2*w3*J[2] - w3*w2*J[1])),
         1/J[1]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[1,0] - ( w3*w1*J[0] - w1*w3*J[2])),
         1/J[2]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[2,0] - ( w1*w2*J[1] - w2*w1*J[0])),
-        0.5*( q4*w1 - q3*w2 + q2*w3),# / qnorm(w1,w2,w3,q1,q2,q3,q4), #kindof a bad way to normalize q I think
-        0.5*( q3*w1 + q4*w2 - q1*w3),# / qnorm(w1,w2,w3,q1,q2,q3,q4),
-        0.5*(-q2*w1 - q1*w2 + q4*w3),# / qnorm(w1,w2,w3,q1,q2,q3,q4),
-        0.5*(-q1*w1 - q2*w2 - q3*w3)# / qnorm(w1,w2,w3,q1,q2,q3,q4),
+        0.5*( q4*w1 - q3*w2 + q2*w3),
+        0.5*( q3*w1 + q4*w2 - q1*w3),
+        0.5*(-q2*w1 - q1*w2 + q4*w3),
+        0.5*(-q1*w1 - q2*w2 - q3*w3)
     ]
     #for storing values which are not tracked in solution (i.e. torques, ref input)
     time_vector.append(time)
@@ -82,18 +96,10 @@ def get_torque(q_command,q_actual,angular_velocity):
     delta_q = ct.get_delta_q(q_command,q_actual)
     controller_torque = ct.get_torque( kp,delta_q, kd, angular_velocity)
     total_torque = controller_torque # + total_disturbance_torque
+    if controller==False:
+        total_torque=np.matrix([[0.0],[0.0],[0.0]])
+
     return total_torque #this will return as 3 dim column vector (in matrix)
-
-
-def qnorm(w1,w2,w3,q1,q2,q3,q4): #This kindof works to normalize q... TODO find a better solution to this
-    q_new = np.array([
-        q1 + 0.5*( q4*w1 - q3*w2 + q2*w3),
-        q2 + 0.5*( q3*w1 - q4*w2 - q1*w3),
-        q3 + 0.5*(-q2*w1 - q1*w2 + q4*w3),
-        q4 + 0.5*(-q1*w1 - q2*w2 - q3*w3)
-    ])
-    qnorm = np.linalg.norm(q_new)
-    return qnorm
 
 def solver(exn,initial_conditions,t_vec,J,command_quaternion):
     #want to solve ODE for various steps of t0-tf and normalize between each step (ensures quaternion norm ~ 1)
@@ -171,15 +177,15 @@ def save_results(t_vec, sol, t2_vec, outputs):
 
 if __name__=="__main__":
     t0 = 0
-    tf = 20
-    n = 40
+    tf = 200
+    n = 1000
     t_vec = np.linspace(t0,tf,n)
     solution = solver(  exnxsofmotion, 
-                        [ 0.1,0.1,1, 0,0,0.3826834,0.9238795 ],    #initial states
+                        [ 0.1,0.1,1.0, 0.0,0.0,0.0,1.0 ],    #initial states
                         t_vec,                  #t_vec to integrate over
-                        [100,100,200],          #J (Principle axis MOI) vector
+                        [100,100,500],          #J (Principle axis MOI) vector
                         [0.0,0.0,0.0,1.0])      #command quaternion
-    att.Animate_Attitude_Set(np.array(solution[:,3:7]).transpose(),10/100)
+    att.Animate_Attitude_Set(np.array(solution[:,3:7]).transpose(),10/100) #TODO figure out timing parameter
     
     output_vector = np.asarray(output_vector)
     plot_results(t_vec, solution, time_vector, output_vector)

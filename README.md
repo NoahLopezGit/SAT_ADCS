@@ -1,4 +1,8 @@
 # SAT_ADCS
 general Satellite ADCS functions which I use for my class.
 
-For Setup (In a venv) run : $ pip install -r /path/to/requirements.txt
+To create virtual environemnt: <br/>
+$ python -m venv env-name <br/>
+For Setup (In a venv) run : <br/>
+$ pip install -r /path/to/requirements.txt <br/>
+To run example run SAT_EOMS.py <br/>
