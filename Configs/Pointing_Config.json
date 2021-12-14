@@ -1,0 +1,23 @@
+{
+    "Control":{
+        "Controller":true,
+        "Track":false
+    },
+    "RXNWheels":{
+        "Wheel_1":{
+            "I":1000,
+            "Kp":5.0,
+            "Kd":40.0
+        },
+        "Wheel_2":{
+            "I":1000,
+            "Kp":5.0,
+            "Kd":40.0
+        },
+        "Wheel_3":{
+            "I":1000,
+            "Kp":5.0,
+            "Kd":40.0
+        }
+    }    
+}

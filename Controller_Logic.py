@@ -4,12 +4,17 @@ import numpy as np
 
 
 
-def get_torque(proportional_coefficient, delta_q, derivative_coefficient, angular_velocity): #body frame?
+def get_torque(proportional_coefficients, delta_q, derivative_coefficients, angular_velocity): #body frame?
     '''
     delta_q should be length 4 column vector (np.matrix style)
     angular_velocity should be length 3 columne vector (np.matrix style)
     '''
-    torque = -proportional_coefficient * delta_q[0:3] - derivative_coefficient * angular_velocity
+    proportional_coefficients = np.diag(proportional_coefficients)
+    derivative_coefficients = np.diag(derivative_coefficients)
+
+    torque = -np.matmul( proportional_coefficients, delta_q[0:3] ) \
+             -np.matmul( derivative_coefficients, angular_velocity)
+
     return torque
 
 

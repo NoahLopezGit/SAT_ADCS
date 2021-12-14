@@ -10,6 +10,11 @@ import math
 -----------------------------------------------------Kinematics----------------------------------------------------
 '''
 #testing change
+def get_angular_error(attitude_matrix):
+    angular_error = np.arccos((np.trace(attitude_matrix)-1.0)/2.0)
+    return angular_error
+
+
 #Calculates 3-2-1 Euler Angles from DCM; TODO: support other euler angle rotations
 def Quat2Euler(quaternion): 
     DCM = Quat2DCM(quaternion)
@@ -170,6 +175,18 @@ def Update_Vec(vec, quat):
     v_tmp = Q_Tran_Vec( quat, vec )
     v_tmp = np.multiply( 1/np.linalg.norm(v_tmp), v_tmp) #normalizing vector bc this blows up TODO: find why this is unstable
     return v_tmp
+
+
+def DCM2Quat(DCM):
+    q4 = 0.5*np.sqrt(1 + DCM[0,0] + DCM[1,1] + DCM[2,2])
+    quaternion = np.matrix([
+        [(DCM[1,2]-DCM[2,1])/(4*q4)],
+        [(DCM[2,0]-DCM[0,2])/(4*q4)],
+        [(DCM[0,1]-DCM[1,0])/(4*q4)],
+        [q4]
+    ])
+    quaternion = quaternion/np.linalg.norm(quaternion)
+    return quaternion
 
 
 '''
