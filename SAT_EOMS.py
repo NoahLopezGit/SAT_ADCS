@@ -43,7 +43,9 @@ kd_list = [
     config_dict["RXNWheels"]["Wheel_2"]["Kd"],
     config_dict["RXNWheels"]["Wheel_3"]["Kd"]
 ]
-controller=config_dict["Control"]["Controller"]
+
+controller  = config_dict["Control"]["Controller"]
+track       = config_dict["Control"]["Track"]
 
 def parse_sat_orientation_csv(name):
     csv_orientation_list= []
@@ -64,7 +66,7 @@ def parse_sat_orientation_csv(name):
 csv_orientation_list = parse_sat_orientation_csv("Configs/rv_vec_HST.csv")
 initial_date_time = csv_orientation_list[0][0]
 #output storage
-time_vector    = [] 
+time_vector     = [] 
 output_vector   = []
 
 #Satellite Integrator Model
@@ -103,10 +105,7 @@ def exnxsofmotion(x_vec, time, J,command_quaternion):
         torque_tmp[0,0],
         torque_tmp[1,0],
         torque_tmp[2,0],
-        x_vec[3],
-        x_vec[4],
-        x_vec[5],
-        x_vec[6]
+        2*np.arccos(np.matmul(np.matrix(command_quaternion), np.matrix([q1,q2,q3,q4]).transpose())[0,0]) #angular difference?
     ])
     return RHS
 
@@ -157,19 +156,82 @@ def solver(initial_conditions,t_vec,J,command_quaternion):
         time_chunks.append(t_vec[10*i:10*(i+1)+1])
 
     final_solution = np.array(initial_conditions)
-    for time_chunk in time_chunks: #dont want inital time of 0
-        sol = sp.odeint(exnxsofmotion, initial_conditions,time_chunk,args=(J,command_quaternion))
-        final_solution = np.vstack((final_solution, sol[1:,:]))
-        initial_conditions = sol[-1,:] #make sure indexed correctly
-        #Normaliation of initial conditions before starting another ODE step
-        initial_conditions[3:7] = initial_conditions[3:7]/np.linalg.norm(initial_conditions[3:7])
+    if track==True:
+        for time_chunk in time_chunks: #dont want inital time of 0
+            date_object = initial_date_time + datetime.timedelta(0,time_chunk[0])
+            for date_time_orientation in csv_orientation_list:
+                if date_object >= date_time_orientation[0]:
+                    continue
+                else:
+                    tmp_position    =  np.matrix(date_time_orientation[1]).transpose()
+                    tmp_velocity    =  np.matrix(date_time_orientation[2]).transpose()
+                    break
+
+            tmp_command_quaternion = att.DCM2Quat(dis.get_Aio(tmp_position,tmp_velocity).transpose())#want inertial to orbital so transpose here
+            command_quaternion = [
+                tmp_command_quaternion[0,0],
+                tmp_command_quaternion[1,0],
+                tmp_command_quaternion[2,0],
+                tmp_command_quaternion[3,0],
+            ]
+            sol = sp.odeint(exnxsofmotion, initial_conditions,time_chunk,args=(J,command_quaternion))
+            final_solution = np.vstack((final_solution, sol[1:,:]))
+            initial_conditions = sol[-1,:] #make sure indexed correctly
+            #Normaliation of initial conditions before starting another ODE step
+            initial_conditions[3:7] = initial_conditions[3:7]/np.linalg.norm(initial_conditions[3:7])
+    else:
+        for time_chunk in time_chunks: #dont want inital time of 0
+            sol = sp.odeint(exnxsofmotion, initial_conditions,time_chunk,args=(J,command_quaternion))
+            final_solution = np.vstack((final_solution, sol[1:,:]))
+            initial_conditions = sol[-1,:] #make sure indexed correctly
+            #Normaliation of initial conditions before starting another ODE step
+            initial_conditions[3:7] = initial_conditions[3:7]/np.linalg.norm(initial_conditions[3:7])
     return final_solution, time_vector, output_vector
 
 
 def plot_results(t_vec, sol, t2_vec, outputs):
     sol_name = ["W1","W2",'W3',"Q1","Q2","Q3","Q4"]
-    output_name = ["T1","T2","T3","Q1","Q2","Q3","Q4"]
-    #plot results
+    output_name = ["T1","T2","T3","err"]
+
+    #plot angular velocities
+    fig1 = plt.figure(1)
+    for i in range(3):
+        solution_vector = sol[:,i]
+        fig1.add_subplot(3,1,1+i%3)
+        plt.plot(
+            t_vec, solution_vector
+        )
+        plt.ylabel(sol_name[i])
+        if i==0: plt.title("Angular Velocities (rads/s)")
+
+    #plot quaternions
+    fig2 = plt.figure(2)
+    for i in range(4):
+        solution_vector = sol[:,3+i]
+        fig2.add_subplot(4,1,1+i%4)
+        plt.plot(
+            t_vec, solution_vector
+        )
+        plt.ylabel(sol_name[3+i])
+        if i==0: plt.title("Quaterions")
+    #plot outputs
+
+    fig3 = plt.figure(3)
+    for i in range(3): #hopefully this works
+        output_vector = outputs[:,i]
+        fig3.add_subplot(3,1,1+i%3)
+        plt.plot(
+            t2_vec, output_vector
+        )
+        plt.ylabel(output_name[i])
+        if i==0: plt.title("Torques (N.m)")
+    
+    fig4 = plt.figure(4)
+    fig4.add_subplot(1,1,1)
+    plt.plot( t2_vec, outputs[:,-1])
+    plt.title("Attitude Error (rads)")
+
+    '''
     fig_dict = {}
     for i in range(np.shape(sol)[1]):
         if i % 4==0:
@@ -194,14 +256,14 @@ def plot_results(t_vec, sol, t2_vec, outputs):
             t2_vec, output_vector
         )
         plt.ylabel(output_name[i])
-    
+    '''
     plt.show()
 
 
 def save_results(t_vec, sol, t2_vec, outputs):
     #store results
     sol_name = ["W1","W2",'W3',"Q1","Q2","Q3","Q4"]
-    output_name = ["T1","T2","T3","Q1","Q2","Q3","Q4"]
+    output_name = ["T1","T2","T3","err"]
     data1 = {}
     data2 = {}
 
@@ -232,13 +294,19 @@ if __name__=="__main__":
     t0 = 0
     tf = total_seconds
     n = int(total_seconds//2) + 1 
-    t_vec = np.linspace(t0,total_seconds,n)
+    t_vec = np.linspace(t0,tf,n)
 
+    #initial_quaternion = att.DCM2Quat(np.matrix(dis.get_Aio(np.matrix(csv_orientation_list[0][1]).transpose(),
+    #                                                        np.matrix(csv_orientation_list[0][2]).transpose())).transpose())
+    initial_conditions = [  
+        0.0,0.0,0.0, 
+        0.5,0.5,0.5,0.5
+    ]
     solution, time_vector, output_vector = solver( 
-                        [ 0.0,0.0,0.0, 0.0,0.0,0.0,1.0 ],    #initial states
+                        initial_conditions,    #initial states
                         t_vec,                  #t_vec to integrate over
                         [77217,77217,25000],          #J (Principle axis MOI) vector
-                        [0.0,0.0,0.0,1.0]       #command quaternion
+                        [ 0.1830127, 0, 0.1830127, 0.9659258 ]       #command quaternion
     )      
     #att.Animate_Attitude_Set(np.array(solution[:,3:7]).transpose(),10/100) #TODO figure out timing parameter
     
