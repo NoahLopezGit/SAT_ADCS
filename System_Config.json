@@ -1,18 +1,4 @@
 {
-    "Initial_Conditions":{
-        "InitialQuaternion":[ 0.0, 0.0, 0.0, 1.0 ],
-        "InitialAngularVelocity":[ 0.0, 0.0, 0.0 ]
-    },
-    "Time":{
-        "Initial":0.0,
-        "Final":1.0,
-        "NumberSteps":100
-    },
-    "SatelliteMOIs":{
-        "SatelliteIx": 77217,
-        "SatelliteIy": 77217,
-        "SatelliteIz": 25000
-    },
     "Control":{
         "Controller":true
     },
@@ -33,5 +19,4 @@
             "Kd":1.0
         }
     }    
-
 }

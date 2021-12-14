@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import Attitude_Kinematics as att
 import Controller_Logic as ct
+import json
 
 """
 Satellite EOM model - Noah Lopez
@@ -24,10 +25,25 @@ TODO
 
 #Global Constants - add to example??
 #import from config.txt file
+# Opening JSON file
+with open('System_Config.json', 'r') as openfile:
+  
+    # Reading from json file
+    config_dict = json.load(openfile)
+  
+#Setting Constants From Config
 
-kp = 10.0
-kd = 100.0
-controller=True
+kp_list = [
+    config_dict["RXNWheels"]["Wheel_1"]["Kp"],
+    config_dict["RXNWheels"]["Wheel_2"]["Kp"],
+    config_dict["RXNWheels"]["Wheel_3"]["Kp"]
+]
+kd_list = [
+    config_dict["RXNWheels"]["Wheel_1"]["Kd"],
+    config_dict["RXNWheels"]["Wheel_2"]["Kd"],
+    config_dict["RXNWheels"]["Wheel_3"]["Kd"]
+]
+controller=config_dict["Control"]["Controller"]
 
 #output storage
 time_vector    = [] 
@@ -41,11 +57,6 @@ def exnxsofmotion(x_vec, time, J,command_quaternion):
     vector of corresponding states (not differential)
     can only go first order so higher order diffeq must be described as system of first order
     '''
-
-    #trying normalizing q every time this function is called
-    #if np.linalg.norm(x_vec[3:7]) > 1.1:
-    #    print("issue")
-    #x_vec[3:7] = x_vec[3:7]/np.linalg.norm(x_vec[3:7])
     
     w1,w2,w3,q1,q2,q3,q4 = x_vec
     #constructing RHS vector TODO add L functionality here... CLEANUP??! 
@@ -94,12 +105,13 @@ def get_torque(q_command,q_actual,angular_velocity):
 
     #need to get sum of disturbance torques and torque from reaction control wheels
     delta_q = ct.get_delta_q(q_command,q_actual)
-    controller_torque = ct.get_torque( kp,delta_q, kd, angular_velocity)
+    controller_torque = ct.get_torque( kp_list,delta_q, kd_list, angular_velocity)
     total_torque = controller_torque # + total_disturbance_torque
     if controller==False:
         total_torque=np.matrix([[0.0],[0.0],[0.0]])
 
     return total_torque #this will return as 3 dim column vector (in matrix)
+
 
 def solver(exn,initial_conditions,t_vec,J,command_quaternion):
     #want to solve ODE for various steps of t0-tf and normalize between each step (ensures quaternion norm ~ 1)
@@ -113,7 +125,7 @@ def solver(exn,initial_conditions,t_vec,J,command_quaternion):
         #Normaliation of initial conditions before starting another ODE step
         initial_conditions[3:7] = initial_conditions[3:7]/np.linalg.norm(initial_conditions[3:7])
         time_previous = time
-    return final_solution
+    return final_solution, time_vector, output_vector
 
 
 def plot_results(t_vec, sol, t2_vec, outputs):
@@ -180,7 +192,7 @@ if __name__=="__main__":
     tf = 200
     n = 1000
     t_vec = np.linspace(t0,tf,n)
-    solution = solver(  exnxsofmotion, 
+    solution, time_vector, output_vector = solver(  exnxsofmotion, 
                         [ 0.1,0.1,1.0, 0.0,0.0,0.0,1.0 ],    #initial states
                         t_vec,                  #t_vec to integrate over
                         [100,100,500],          #J (Principle axis MOI) vector
