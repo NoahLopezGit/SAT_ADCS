@@ -4,19 +4,18 @@ import scipy.integrate as sp
 import matplotlib.pyplot as plt
 import pandas as pd
 import Attitude_Kinematics as att
+import Disturbance_Torques as dis
 import Controller_Logic as ct
 import json
+import csv
+import datetime
 
 """
 Satellite EOM model - Noah Lopez
 TODO
--add toggleable control
--add toggleable animate
--get global constants working when importing (and you change them based on config)
 -separate use (examples) from import file (need to make it compatible)
 -add momentum wheel physics and saturation tracking
--add disturbance torques (and verify they are correct)
--add position and velocity vector input for orbital model (can take our generated inputs or from a csv)
+-disturbance torques (verify they are correct)
 -add momentum dumping model (thrusters)
 -make plotting better
 ?-refactor to work in one list mode (np.matrix columns)
@@ -26,9 +25,10 @@ TODO
 #Global Constants - add to example??
 #import from config.txt file
 # Opening JSON file
-with open('System_Config.json', 'r') as openfile:
+system_config_file = input("Input Controller Configuration File\n")
+with open(system_config_file, 'r') as openfile:
   
-    # Reading from json file
+    #Reading from json file
     config_dict = json.load(openfile)
   
 #Setting Constants From Config
@@ -45,11 +45,38 @@ kd_list = [
 ]
 controller=config_dict["Control"]["Controller"]
 
+def parse_sat_orientation_csv(name):
+    csv_orientation_list= []
+    with open(name, newline='') as csvfile:
+        csv_reader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+        for row in csv_reader:
+            date_string =   str(row[0]) + ','       \
+                            + str(row[1]) + ','     \
+                            + str(row[2]) + ','     \
+                            + str(row[3].split(',')[0])
+            tmp_position    = [float(x) for x in row[3].split(',')[1:4]]
+            tmp_velocity    = [float(x) for x in row[3].split(',')[4:7]]
+            dt_object = datetime.datetime.strptime(date_string, "%d,%b,%Y,%H:%M:%S.%f")
+            csv_orientation_list.append([dt_object, tmp_position, tmp_velocity])
+    
+    return csv_orientation_list
+
+csv_orientation_list = parse_sat_orientation_csv("Configs/rv_vec_HST.csv")
+initial_date_time = csv_orientation_list[0][0]
 #output storage
 time_vector    = [] 
 output_vector   = []
 
 #Satellite Integrator Model
+'''
+def get_sat_orientation(time):
+    for orientation_time in orientation_time_list:
+        if time > orientation_time:
+
+    return sat_orientation
+'''
+            
+
 def exnxsofmotion(x_vec, time, J,command_quaternion):
     '''
     Need in for for scipy odeint.
@@ -60,21 +87,22 @@ def exnxsofmotion(x_vec, time, J,command_quaternion):
     
     w1,w2,w3,q1,q2,q3,q4 = x_vec
     #constructing RHS vector TODO add L functionality here... CLEANUP??! 
+    torque_tmp = get_torque(time,command_quaternion,[q1,q2,q3,q4],[w1,w2,w3]) #TODO make sure this is allowed
     RHS = [
-        1/J[0]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[0,0] - ( w2*w3*J[2] - w3*w2*J[1])),
-        1/J[1]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[1,0] - ( w3*w1*J[0] - w1*w3*J[2])),
-        1/J[2]*( get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[2,0] - ( w1*w2*J[1] - w2*w1*J[0])),
+        1/J[0]*( torque_tmp[0,0] - ( w2*w3*J[2] - w3*w2*J[1])),
+        1/J[1]*( torque_tmp[1,0] - ( w3*w1*J[0] - w1*w3*J[2])),
+        1/J[2]*( torque_tmp[2,0] - ( w1*w2*J[1] - w2*w1*J[0])),
         0.5*( q4*w1 - q3*w2 + q2*w3),
         0.5*( q3*w1 + q4*w2 - q1*w3),
-        0.5*(-q2*w1 - q1*w2 + q4*w3),
+        0.5*(-q2*w1 + q1*w2 + q4*w3),
         0.5*(-q1*w1 - q2*w2 - q3*w3)
     ]
     #for storing values which are not tracked in solution (i.e. torques, ref input)
     time_vector.append(time)
     output_vector.append([
-        get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[0,0],
-        get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[1,0],
-        get_torque(command_quaternion,[q1,q2,q3,q4],[w1,w2,w3])[2,0],
+        torque_tmp[0,0],
+        torque_tmp[1,0],
+        torque_tmp[2,0],
         x_vec[3],
         x_vec[4],
         x_vec[5],
@@ -83,48 +111,58 @@ def exnxsofmotion(x_vec, time, J,command_quaternion):
     return RHS
 
 
-def get_torque(q_command,q_actual,angular_velocity):
+def get_sat_orientation(time,quaternion):
+    date_object = initial_date_time + datetime.timedelta(0,time)
+    for date_time_orientation in csv_orientation_list:
+        if date_object >= date_time_orientation[0]:
+            tmp_position    =  np.matrix(date_time_orientation[1]).transpose()
+            tmp_velocity    =  np.matrix(date_time_orientation[2]).transpose()
+            break
+    euler_angles    = np.array(att.Quat2Euler(quaternion)) 
+
+    sat_orientation = dis.Orientation(
+        date_object,
+        tmp_position,
+        tmp_velocity,
+        euler_angles
+    )
+    return sat_orientation
+
+
+def get_torque(time,q_command,q_actual,angular_velocity):
     #converting lists to matrix form
-    q_command = np.matrix([
-        [q_command[0]],
-        [q_command[1]],
-        [q_command[2]],
-        [q_command[3]]
-    ])
-    q_actual = np.matrix([
-        [q_actual[0]],
-        [q_actual[1]],
-        [q_actual[2]],
-        [q_actual[3]]
-    ])
-    angular_velocity = np.matrix([
-        [angular_velocity[0]],
-        [angular_velocity[1]],
-        [angular_velocity[2]]
-    ])
+    q_command = np.matrix(q_command).transpose()
+    q_actual = np.matrix(q_actual).transpose()
+    angular_velocity = np.matrix(angular_velocity).transpose()
 
+    sat_orientation = get_sat_orientation(time,q_actual)
     #need to get sum of disturbance torques and torque from reaction control wheels
-    delta_q = ct.get_delta_q(q_command,q_actual)
-    controller_torque = ct.get_torque( kp_list,delta_q, kd_list, angular_velocity)
-    total_torque = controller_torque # + total_disturbance_torque
     if controller==False:
-        total_torque=np.matrix([[0.0],[0.0],[0.0]])
+        controller_torque=np.matrix([[0.0],[0.0],[0.0]])
+    else:
+        delta_q = ct.get_delta_q(q_command,q_actual)
+        controller_torque = ct.get_torque( kp_list,delta_q, kd_list, angular_velocity)
 
+    total_torque = controller_torque + dis.get_total_torque(sat_orientation) #must be updated at each t_step
     return total_torque #this will return as 3 dim column vector (in matrix)
 
 
-def solver(exn,initial_conditions,t_vec,J,command_quaternion):
+def solver(initial_conditions,t_vec,J,command_quaternion):
     #want to solve ODE for various steps of t0-tf and normalize between each step (ensures quaternion norm ~ 1)
     #split up by intevervals of t_vec
-    time_previous = 0.0
+    time_chunks = []
+    for i in range(len(t_vec)//10):
+        if i == len(t_vec//10)-1:
+            time_chunks.append(t_vec[10*i:])
+        time_chunks.append(t_vec[10*i:10*(i+1)+1])
+
     final_solution = np.array(initial_conditions)
-    for time in t_vec[1:]: #dont want inital time of 0
-        sol = sp.odeint(exn, initial_conditions,[time_previous, time],args=(J,command_quaternion))
-        final_solution = np.vstack((final_solution, sol[-1,:]))
+    for time_chunk in time_chunks: #dont want inital time of 0
+        sol = sp.odeint(exnxsofmotion, initial_conditions,time_chunk,args=(J,command_quaternion))
+        final_solution = np.vstack((final_solution, sol[1:,:]))
         initial_conditions = sol[-1,:] #make sure indexed correctly
         #Normaliation of initial conditions before starting another ODE step
         initial_conditions[3:7] = initial_conditions[3:7]/np.linalg.norm(initial_conditions[3:7])
-        time_previous = time
     return final_solution, time_vector, output_vector
 
 
@@ -188,16 +226,21 @@ def save_results(t_vec, sol, t2_vec, outputs):
 
 
 if __name__=="__main__":
+    difference = (csv_orientation_list[-1][0] - initial_date_time)
+    total_seconds = difference.total_seconds()
+
     t0 = 0
-    tf = 200
-    n = 1000
-    t_vec = np.linspace(t0,tf,n)
-    solution, time_vector, output_vector = solver(  exnxsofmotion, 
-                        [ 0.1,0.1,1.0, 0.0,0.0,0.0,1.0 ],    #initial states
+    tf = total_seconds
+    n = int(total_seconds//2) + 1 
+    t_vec = np.linspace(t0,total_seconds,n)
+
+    solution, time_vector, output_vector = solver( 
+                        [ 0.0,0.0,0.0, 0.0,0.0,0.0,1.0 ],    #initial states
                         t_vec,                  #t_vec to integrate over
-                        [100,100,500],          #J (Principle axis MOI) vector
-                        [0.0,0.0,0.0,1.0])      #command quaternion
-    att.Animate_Attitude_Set(np.array(solution[:,3:7]).transpose(),10/100) #TODO figure out timing parameter
+                        [77217,77217,25000],          #J (Principle axis MOI) vector
+                        [0.0,0.0,0.0,1.0]       #command quaternion
+    )      
+    #att.Animate_Attitude_Set(np.array(solution[:,3:7]).transpose(),10/100) #TODO figure out timing parameter
     
     output_vector = np.asarray(output_vector)
     plot_results(t_vec, solution, time_vector, output_vector)
